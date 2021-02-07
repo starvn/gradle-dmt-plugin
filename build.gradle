@@ -19,6 +19,10 @@ plugins {
     id 'java'
 }
 
+apply plugin: 'maven'
+
+apply from: 'publish-maven.gradle'
+
 group 'com.github.starvn'
 
 repositories {
