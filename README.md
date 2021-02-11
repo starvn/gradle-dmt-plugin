@@ -1,5 +1,7 @@
 # Gradle DMT Plugin
 
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/dashboard?id=starvn_gradle-dmt-plugin)
+
 ## Introduction
 
 A Gradle plugin that provides Maven like dependency management and exclusions. The
