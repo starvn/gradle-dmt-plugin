@@ -20,12 +20,17 @@ buildscript {
     jcenter()
     maven { url "https://plugins.gradle.org/m2/" }
   }
+  dependencies {
+    classpath "org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:3.1.1"
+  }
 }
 
 apply plugin: 'groovy'
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'checkstyle'
+apply plugin: 'jacoco'
+apply plugin: 'org.sonarqube'
 
 apply from: 'publish-maven.gradle'
 
@@ -56,5 +61,32 @@ tasks.withType(Checkstyle) {
   reports {
     xml.enabled true
     html.enabled true
+  }
+}
+
+jacoco {
+  toolVersion = '0.8.6'
+}
+
+test {
+  testLogging {
+    quiet {
+      events 'failed'
+      exceptionFormat 'full'
+    }
+    exceptionFormat 'full'
+  }
+}
+
+sonarqube {
+  properties {
+    property "sonar.projectKey", "starvn_gradle-dmt-plugin"
+    property "sonar.organization", "starvn"
+    property "sonar.host.url", "https://sonarcloud.io"
+    property 'sonar.jacoco.reportPath', "${buildDir}/jacoco/test.exec"
+    property 'sonar.java.coveragePlugin', 'jacoco'
+    property 'sonar.links.homepage', 'https://github.com/starvn/gradle-dmt-plugin'
+    property 'sonar.links.issue', 'https://github.com/starvn/gradle-dmt-plugin/issues'
+    property 'sonar.links.scm', 'https://github.com/starvn/gradle-dmt-plugin'
   }
 }
