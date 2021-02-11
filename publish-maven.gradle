@@ -19,7 +19,7 @@ install {
     pom.whenConfigured { generatedPom ->
       generatedPom.dependencies.removeAll { it.scope == 'test' }
       generatedPom.project {
-        name = 'Gradle :: DMA :: Plugin'
+        name = 'Gradle :: DMT :: Plugin'
         description = 'A Gradle plugin that provides Maven like dependency management functionality'
         url = 'https://github.com/starvn/gradle-dmt-plugin'
         organization {
