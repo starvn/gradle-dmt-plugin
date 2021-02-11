@@ -37,18 +37,20 @@ apply from: 'publish-maven.gradle'
 group 'com.github.starvn'
 description = 'Dependency Management Plugin'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+ext {
+  cglibVersion = '3.3.0'
+  jarjarVersion = '1.2.1'
+  mavenVersion = '3.6.0'
+  spockVersion = GroovySystem.version.startsWith('1.') ? '0.7-groovy-1.8' : '0.7-groovy-2.0'
+}
+
+sourceCompatibility = 11
+targetCompatibility = 11
 
 repositories {
   mavenCentral()
   maven { url 'https://repo.gradle.org/gradle/libs-releases' }
   maven { url 'https://starvn.jfrog.io/artifactory/plugins-release' }
-}
-
-dependencies {
-  compile 'org.codehaus.groovy:groovy-all:2.3.11'
-  testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
 checkstyle {
@@ -61,6 +63,110 @@ tasks.withType(Checkstyle) {
   reports {
     xml.enabled true
     html.enabled true
+  }
+}
+
+sonarqube {
+  properties {
+    property "sonar.projectKey", "starvn_gradle-dmt-plugin"
+    property "sonar.organization", "starvn"
+    property "sonar.host.url", "https://sonarcloud.io"
+    property 'sonar.jacoco.reportPath', "${buildDir}/jacoco/test.exec"
+    property 'sonar.java.coveragePlugin', 'jacoco'
+    property 'sonar.links.homepage', 'https://github.com/starvn/gradle-dmt-plugin'
+    property 'sonar.links.issue', 'https://github.com/starvn/gradle-dmt-plugin/issues'
+    property 'sonar.links.scm', 'https://github.com/starvn/gradle-dmt-plugin'
+  }
+}
+
+configurations {
+  jarjar
+  maven
+}
+
+task mavenRepackJar(type: Jar) { repackJar ->
+  repackJar.baseName = "maven-repack"
+  repackJar.version = mavenVersion
+
+  doLast() {
+    project.ant {
+      taskdef name: "jarjar", classname: "com.tonicsystems.jarjar.JarJarTask",
+        classpath: configurations.jarjar.asPath
+      jarjar(destfile: repackJar.archivePath) {
+        configurations.maven.each { originalJar ->
+          zipfileset(src: originalJar)
+        }
+        rule(pattern: 'org.**', result: 'com.github.starvn.dmt.org.@1')
+      }
+    }
+  }
+}
+
+dependencies {
+  compile gradleApi()
+  compile localGroovy()
+  compile(files(mavenRepackJar))
+  jarjar "org.gradle.jarjar:jarjar:$jarjarVersion"
+  maven "org.apache.maven:maven-model-builder:$mavenVersion"
+  testCompile("org.spockframework:spock-core:$spockVersion") {
+    exclude group: 'org.codehaus.groovy'
+  }
+  testCompile "cglib:cglib-nodep:$cglibVersion"
+  testCompile gradleTestKit()
+}
+
+jar {
+  dependsOn mavenRepackJar
+  from(zipTree(mavenRepackJar.archivePath)) {
+    include 'com/github/starvn/**'
+    include 'META-INF/plexus/**'
+  }
+
+  manifest {
+    attributes(
+      'Created-By': "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})".toString(),
+      'Implementation-Title': project.description,
+      'Implementation-Version': project.version,
+      'Implementation-Vendor': 'StarVN Team'
+    )
+  }
+}
+
+javadoc {
+  title = "$project.description $project.version API"
+  exclude 'com/github/starvn/dma/internal/**'
+  options {
+    links "https://docs.gradle.org/${project.getGradle().getGradleVersion()}/javadoc/",
+      'https://docs.oracle.com/en/java/javase/11/docs/api/'
+  }
+}
+
+tasks.withType(Javadoc) {
+  failOnError false
+  options.addStringOption('Xdoclint:none', '-quiet')
+  options.addStringOption('encoding', 'UTF-8')
+  options.addStringOption('charSet', 'UTF-8')
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+  classifier('sources')
+  from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar) {
+  classifier('javadoc')
+  from javadoc
+}
+
+task docsZip(type: Zip, dependsOn: [':javadoc']) {
+  group = 'Distribution'
+  baseName('gradle-dmt-plugin')
+  classifier('docs')
+  description = "Builds -${classifier()} archive containing API and reference documentation"
+  destinationDir(file("${project.buildDir}/distributions"))
+
+  from(javadoc) {
+    into 'api'
   }
 }
 
@@ -78,15 +184,8 @@ test {
   }
 }
 
-sonarqube {
-  properties {
-    property "sonar.projectKey", "starvn_gradle-dmt-plugin"
-    property "sonar.organization", "starvn"
-    property "sonar.host.url", "https://sonarcloud.io"
-    property 'sonar.jacoco.reportPath', "${buildDir}/jacoco/test.exec"
-    property 'sonar.java.coveragePlugin', 'jacoco'
-    property 'sonar.links.homepage', 'https://github.com/starvn/gradle-dmt-plugin'
-    property 'sonar.links.issue', 'https://github.com/starvn/gradle-dmt-plugin/issues'
-    property 'sonar.links.scm', 'https://github.com/starvn/gradle-dmt-plugin'
-  }
+artifacts {
+  archives sourcesJar
+  archives javadocJar
+  archives docsZip
 }
