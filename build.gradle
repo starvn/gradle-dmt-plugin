@@ -108,6 +108,10 @@ dependencies {
   compile(files(mavenRepackJar))
   jarjar "org.gradle.jarjar:jarjar:$jarjarVersion"
   maven "org.apache.maven:maven-model-builder:$mavenVersion"
+  compileOnly 'org.projectlombok:lombok:1.18.16'
+  annotationProcessor 'org.projectlombok:lombok:1.18.16'
+  testCompileOnly 'org.projectlombok:lombok:1.18.16'
+  testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
   testCompile("org.spockframework:spock-core:$spockVersion") {
     exclude group: 'org.codehaus.groovy'
   }
